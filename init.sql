@@ -1,0 +1,13 @@
+CREATE TABLE illusts IF NOT EXISTS (
+    id INT PRIMARY KEY AUTO_INCREAMENT,
+    type INT NOT NULL,
+    user INT NOT NULL,
+    raw_json TEXT NOT NULL,
+    downloaded BOOLEAN NOT NULL
+);
+
+CREATE TABLE users IF NOT EXISTS (
+    id INT PRIMARY KEY AUTO_INCREAMENT,
+    type INT NOT NULL,
+    raw_json TEXT NOT NULL
+);

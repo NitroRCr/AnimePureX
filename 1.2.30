@@ -1,0 +1,9 @@
+Looking in indexes: https://pypi.tuna.tsinghua.edu.cn/simple
+Requirement already satisfied: cloudscraper in c:\users\havec\appdata\local\programs\python\python38\lib\site-packages (1.2.48)
+Requirement already satisfied: pyparsing>=2.4.7 in c:\users\havec\appdata\local\programs\python\python38\lib\site-packages (from cloudscraper) (2.4.7)
+Requirement already satisfied: requests>=2.9.2 in c:\users\havec\appdata\local\programs\python\python38\lib\site-packages (from cloudscraper) (2.25.1)
+Requirement already satisfied: requests-toolbelt>=0.9.1 in c:\users\havec\appdata\local\programs\python\python38\lib\site-packages (from cloudscraper) (0.9.1)
+Requirement already satisfied: idna<3,>=2.5 in c:\users\havec\appdata\local\programs\python\python38\lib\site-packages (from requests>=2.9.2->cloudscraper) (2.10)
+Requirement already satisfied: urllib3<1.27,>=1.21.1 in c:\users\havec\appdata\local\programs\python\python38\lib\site-packages (from requests>=2.9.2->cloudscraper) (1.26.2)
+Requirement already satisfied: certifi>=2017.4.17 in c:\users\havec\appdata\local\programs\python\python38\lib\site-packages (from requests>=2.9.2->cloudscraper) (2020.12.5)
+Requirement already satisfied: chardet<5,>=3.0.2 in c:\users\havec\appdata\local\programs\python\python38\lib\site-packages (from requests>=2.9.2->cloudscraper) (3.0.4)
