@@ -3,17 +3,25 @@ import json
 
 CONF_TEMPLATES = {
     'config.json': {
-        "pixiv_refresh_token": "",
-        #"img_proxy_host": "i.pixiv.cat",
-        "sqlite_db": "sqlite.db",
-        "host": "127.0.0.1",
-        "port": 5005
-    }
+    "pixiv_refresh_token": "",
+    #"img_proxy_host": "i.pixiv.cat",
+    "sqlite_db": "db/purex.db",
+    "host": "127.0.0.1",
+    "port": 5005,
+    "pixiv_ranking": {
+        "ranking_type": "illust",
+        "mode": "monthly",
+        "limit": 1000,
+        "loop": 50
+    },
+    "download_threads": 4
+}
 }
 
 DIRS = [
     'static',
-    'static/img'
+    'static/img',
+    'db'
 ]
 
 

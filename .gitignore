@@ -1,3 +1,16 @@
+# config
+/config.json
+/history.json
+
+# test
+/test/
+
+# db
+/db/
+
+# static
+/static/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,7 +1,14 @@
 {
     "pixiv_refresh_token": "cqShlPuyuCh7mGXGKPN53NE0roZVrxRfTNaChadB_c0",
     "img_proxy_host": "i.pixiv.cat",
-    "sqlite_db": "sqlite.db",
+    "sqlite_db": "db/purex.db",
     "host": "127.0.0.1",
-    "port": 5005
+    "port": 5005,
+    "pixiv_ranking": {
+        "ranking_type": "illust",
+        "mode": "weekly",
+        "limit": 100,
+        "loop": 3
+    },
+    "download_threads": 4
 }
