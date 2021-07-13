@@ -1,15 +1,18 @@
 # config
 /config.json
-/history.json
 
 # test
 /test/
+/test.py
 
 # db
 /db/
 
 # static
 /static/
+
+# data
+/data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

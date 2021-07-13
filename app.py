@@ -1,13 +1,12 @@
 from flask import Flask, request, abort
 from common import (
     Illust,
-    CONFIG,
-    random_illusts,
-    Illust,
+    search_illusts,
+    IllustSort,
     User,
-    IdNotFoundError,
-    ref_sql_db,
-    close_db
+    CONFIG,
+    AgeLimit,
+    IdNotFoundError
 )
 import json
 
@@ -15,31 +14,34 @@ app = Flask(__name__, static_url_path='')
 
 @app.route('/illusts')
 def get_illusts():
-    ref_sql_db()
-    limit = request.args['limit'] if 'limit' in request.args else 20
-    ret = json.dumps(random_illusts(limit), ensure_ascii=False)
-    close_db()
-    return ret
+    search = request.args['search'] if 'search' in request.args else {
+        'sort': IllustSort.RANDOM.value
+    }
+    limit = search['limit'] if 'limit' in search else 20
+    sort = IllustSort(search['sort']) if 'sort' in search else IllustSort.DEFAULT
+    query = search['query'] if 'query' in search else {}
+    if 'downloaded' not in query:
+        query['downloaded'] = True
+    if 'age_limit' not in query:
+        query['age_limit'] = AgeLimit.ALL_AGE.value
+    illusts = search_illusts(limit, sort, query)
+    return json.dumps([i.json() for i in illusts], ensure_ascii=False)
 
 @app.route('/illusts/<int:id>')
 def get_illust(id):
-    ref_sql_db()
     try:
         illust = Illust(id)
     except IdNotFoundError:
         abort(404)
-    close_db()
     return json.dumps(illust.json(), ensure_ascii=False)
 
 @app.route('/users/<int:id>')
 def get_user(id):
-    ref_sql_db()
     try:
         user = User(id)
     except IdNotFoundError:
         abort(404)
-    close_db()
     return json.dumps(user.json(), ensure_ascii=False)
 
 if __name__ == '__main__':
-    app.run(host=CONFIG['host'], port=CONFIG['port'])
+    app.run(host=CONFIG['flask']['host'], port=CONFIG['flask']['port'])
