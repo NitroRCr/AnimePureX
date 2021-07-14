@@ -7,7 +7,7 @@ from threading import Thread
 import init
 import time
 from urllib.parse import urljoin
-from joblib import Parallel, delayed
+#from joblib import Parallel, delayed
 import os
 from elasticsearch import Elasticsearch
 import re
@@ -518,8 +518,9 @@ class User:
         }
 
 
-def search_illusts(limit, sort=IllustSort.DEFAULT, query=None):
+def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
     body = {
+        'from': offset,
         'size': limit,
         '_source': []
     }
