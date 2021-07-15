@@ -149,6 +149,10 @@ if not es.indices.exists(Indexes.ILLUSTS.value):
                     'type': 'text',
                     'index': False
                 },
+                'caption': {
+                    'type': 'text',
+                    'index': False
+                },
                 'type': {
                     'type': 'byte'
                 },
@@ -282,6 +286,7 @@ class Illust:
         self.image_urls = self.get_original_urls(info)
         self.image_exts = [url.split('.')[-1] for url in self.image_urls]
         self.type_likes = info.total_bookmarks
+        self.caption = info.caption
         self.publish_time = round(time.mktime(time.strptime(
             info.create_date.replace(':', ''), '%Y-%m-%dT%H%M%S%z')))
         if info.x_restrict == 0:
@@ -356,6 +361,7 @@ class Illust:
     def read(self):
         info = es.get(Indexes.ILLUSTS.value, self.id)['_source']
         self.title = info['title']
+        self.caption = info['caption']
         self.type = APIType(info['type'])
         self.user = User(from_id=info['user'])
         self.type_id = info['type_id']
@@ -371,6 +377,7 @@ class Illust:
     def write(self):
         es.index(Indexes.ILLUSTS.value, {
             'title': self.title,
+            'caption': self.caption,
             'type': self.type.value,
             'user': self.user.id,
             'type_id': self.type_id,
@@ -390,6 +397,7 @@ class Illust:
         res = {
             'id': self.id,
             'title': self.title,
+            'caption': self.caption,
             'type': self.type.value,
             'type_id': self.type_id,
             'tags': self.type_tags,
