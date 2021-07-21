@@ -5,6 +5,9 @@
 /test/
 /test.py
 
+# models
+/saved_models
+
 # db
 /db/
 

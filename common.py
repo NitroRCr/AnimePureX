@@ -12,6 +12,7 @@ import os
 from elasticsearch import Elasticsearch
 import re
 import subprocess
+import evaluators as evals
 
 
 class AgeLimit(IntEnum):
@@ -194,8 +195,19 @@ if not es.indices.exists(Indexes.ILLUSTS.value):
                 },
                 'downloaded': {
                     'type': 'boolean'
+                },
+                'passed_evals': {
+                    'type': 'text',
+                    'analyzer': 'whitespace'
+                },
+                'tested_evals': {
+                    'type': 'text',
+                    'analyzer': 'whitespace'
                 }
             }
+        },
+        'settings': {
+            'refresh_interval': '60s'
         }
     })
 
@@ -229,9 +241,20 @@ if not es.indices.exists(Indexes.USERS.value):
                     'index': False
                 }
             }
+        },
+        'settings': {
+            'refresh_interval': '3s'
         }
     })
 
+evaluators = [
+    {
+        'name': 'quality_v1',
+        'enable': False,
+        'eval': evals.quality_v1.eval,
+        'show_name': '质量v1'
+    }
+]
 
 class Illust:
     def __init__(self, from_id=None, pixiv_info=None, pixiv_id=None):
@@ -296,6 +319,8 @@ class Illust:
         else:
             raise Exception()
         self.downloaded = False
+        self.passed_evals = []
+        self.tested_evals = []
         self.write()
 
     def get_original_urls(self, info):
@@ -373,6 +398,8 @@ class Illust:
         self.publish_time = info['publish_time']
         self.age_limit = AgeLimit(info['age_limit'])
         self.downloaded = info['downloaded']
+        self.passed_evals = info['passed_evals'].split(' ')
+        self.tested_evals = info['tested_evals'].split(' ')
 
     def write(self):
         es.index(Indexes.ILLUSTS.value, {
@@ -389,7 +416,9 @@ class Illust:
             'type_likes': self.type_likes,
             'publish_time': self.publish_time,
             'age_limit': self.age_limit.value,
-            'downloaded': self.downloaded
+            'downloaded': self.downloaded,
+            'passed_evals': ' '.join(self.passed_evals),
+            'tested_evals': ' '.join(self.tested_evals)
         }, id=self.id)
 
     def json(self):
@@ -405,7 +434,8 @@ class Illust:
             'publish_time': self.publish_time,
             'age_limit': self.age_limit.value,
             'user': self.user.json(),
-            'downloaded': self.downloaded
+            'downloaded': self.downloaded,
+            'passed_evals': self.passed_evals
         }
         if self.downloaded:
             res['image_urls'] = []
@@ -545,12 +575,19 @@ def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
     if query:
         must = []
         filter = []
-        body['query'] = {'bool': {'must': must, 'filter': filter}}
+        must_not = []
+        body['query'] = {'bool': {'must': must, 'filter': filter, 'must_not': must_not}}
         if 'text' in query:
             must.append({'match': {'searched': query['text']}})
         if 'tags' in query:
             for tag in query['tags']:
                 filter.append({'term': {'type_tags': tag}})
+        if 'passed_evals' in query:
+            for evaluator in query['passed_evals']:
+                filter.append({'term': {'passed_evals': evaluator}})
+        if 'not_tested_evals' in query:
+            for evaluator in query['not_tested_evals']:
+                must_not.append({'term': {'tested_evals': evaluator}})
         if 'downloaded' in query:
             filter.append({'term': {'downloaded': query['downloaded']}})
         if 'type' in query:
@@ -559,7 +596,6 @@ def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
             filter.append({'term': {'age_limit': query['age_limit']}})
     hits = es.search(body, Indexes.ILLUSTS.value)['hits']['hits']
     return [Illust(from_id=hit['_id']) for hit in hits]
-
 
 def pixiv_loop_ranking():
     rank = CONFIG['pixiv_api']['ranking']
@@ -637,7 +673,38 @@ def pixiv_loop_ranking():
 
 
 def download_batch(illusts):
-    n_job = CONFIG['download_threads']
-    # Parallel(n_job)(delayed(lambda i: i.download())(i) for i in illusts)
     for i in illusts:
         i.download()
+
+
+def evaluate_all():
+    batch_size = 32
+    limit = 1000
+    for evaluator in evaluators:
+        offset = 0
+        illusts = []
+        res = search_illusts(limit, offset, IllustSort.TIME, {
+            'not_tested_evals': [evaluator['name']]
+        })
+        while len(res) != 0:
+            illusts += res
+            offset += len(res)
+            res = search_illusts(limit, offset, IllustSort.TIME, {
+                'not_tested_evals': [evaluator['name']]
+            })
+        offset = 0
+        num = len(illusts)
+        while offset < num:
+            batch_illusts = illusts[offset:min(offset+batch_size, num)]
+            size = len(batch_illusts)
+            iids = [i.id for i in batch_illusts]
+            img_paths = [os.path.join(Paths.IMG_DIR.value % iid, 'large.jpg') for iid in iids]
+            results = evaluator['eval_batch'](img_paths)
+            for i in range(size):
+                illust = batch_illusts[i]
+                illust.read()
+                illust.tested_evals.append(evaluator['name'])
+                if results[i]:
+                    illust.passed_evals.append(evaluator['name'])
+                illust.write()
+            offset += size
