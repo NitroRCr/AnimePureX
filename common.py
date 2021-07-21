@@ -12,7 +12,7 @@ import os
 from elasticsearch import Elasticsearch
 import re
 import subprocess
-import evaluators as evals
+from evaluators import quality_v1
 
 
 class AgeLimit(IntEnum):
@@ -251,7 +251,8 @@ evaluators = [
     {
         'name': 'quality_v1',
         'enable': False,
-        'eval': evals.quality_v1.eval,
+        'eval': quality_v1.eval,
+        'eval_batch': quality_v1.eval_batch,
         'show_name': '质量v1'
     }
 ]
