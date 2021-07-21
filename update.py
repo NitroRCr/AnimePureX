@@ -1,4 +1,4 @@
-from common import pixiv_loop_ranking
-import json
+from common import pixiv_loop_ranking, evaluate_all
 
 pixiv_loop_ranking()
+evaluate_all()
