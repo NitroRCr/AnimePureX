@@ -263,8 +263,6 @@ class Illust:
         if from_id is not None:
             self.id = from_id
             self.read()
-        elif pixiv_info is not None:
-            self.load_from_pixiv(pixiv_info)
         elif pixiv_id is not None:
             hits = es.search({
                 'query': {'bool': {'filter': [
@@ -282,6 +280,9 @@ class Illust:
                 self.id = hits[0]['_id']
                 self.read()
             else:
+                if pixiv_info:
+                    self.load_from_pixiv(pixiv_info)
+                    return
                 for i in api_tries:
                     try:
                         resp = aapi.illust_detail(pixiv_id)
@@ -695,7 +696,8 @@ def evaluate_all():
             illusts += res
             offset += len(res)
             res = search_illusts(limit, offset, IllustSort.TIME, {
-                'not_tested_evals': [evaluator['name']]
+                'not_tested_evals': [evaluator['name']],
+                'downloaded': True
             })
         offset = 0
         num = len(illusts)
