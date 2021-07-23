@@ -251,9 +251,10 @@ evaluators = [
     {
         'name': 'quality_v1',
         'enable': False,
+        'load': quality_v1.load,
         'eval': quality_v1.eval,
         'eval_batch': quality_v1.eval_batch,
-        'show_name': '质量v1'
+        'show_name': '高质量v1'
     }
 ]
 
@@ -682,6 +683,9 @@ def evaluate_all():
     batch_size = 32
     limit = 1000
     for evaluator in evaluators:
+        if not evaluator['enable']:
+            continue
+        evaluator['load']()
         offset = 0
         illusts = []
         res = search_illusts(limit, offset, IllustSort.TIME, {
@@ -699,7 +703,7 @@ def evaluate_all():
             batch_illusts = illusts[offset:min(offset+batch_size, num)]
             size = len(batch_illusts)
             iids = [i.id for i in batch_illusts]
-            img_paths = [os.path.join(Paths.IMG_DIR.value % iid, 'large.jpg') for iid in iids]
+            img_paths = [os.path.join(Paths.IMG_DIR.value % iid, 'p0_large.jpg') for iid in iids]
             results = evaluator['eval_batch'](img_paths)
             for i in range(size):
                 illust = batch_illusts[i]

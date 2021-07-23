@@ -46,7 +46,8 @@ DIRS = [
     'static',
     'static/img',
     'static/user',
-    'data'
+    'data',
+    'saved_models'
 ]
 
 

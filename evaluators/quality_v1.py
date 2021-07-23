@@ -2,11 +2,18 @@ from keras import models
 from keras.preprocessing import image
 import numpy as np
 
-model = models.load_model('saved_models/quality_model.h5')
+model = None
 target_size = (150, 150)
 
 def _rescale(x):
     return x/255
+
+def load():
+    if model:
+        return
+    global model
+    model = models.load_model('saved_models/quality_model.h5')
+
 
 def eval(img_path):
     img = image.load_img(img_path, target_size=(150, 150))
