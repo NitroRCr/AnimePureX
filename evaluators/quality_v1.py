@@ -9,9 +9,9 @@ def _rescale(x):
     return x/255
 
 def load():
+    global model
     if model:
         return
-    global model
     model = models.load_model('saved_models/quality_model.h5')
 
 

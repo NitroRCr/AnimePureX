@@ -53,8 +53,8 @@ class Keys(Enum):
 
 
 class Indexes(Enum):
-    ILLUSTS = 'purex_illusts'
-    USERS = 'purex_users'
+    ILLUSTS = 'purex_illusts_v0.2'
+    USERS = 'purex_users_v0.2'
 
 
 class JsonDict:
