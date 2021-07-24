@@ -650,7 +650,7 @@ def pixiv_loop_ranking():
                     continue
                 if illust.id in ids:
                     continue
-                illusts.append(Illust(pixiv_info=illust))
+                illusts.append(Illust(pixiv_id=illust.id, pixiv_info=illust))
                 ids.append(illust.id)
             offset += 30
         if date_err:
