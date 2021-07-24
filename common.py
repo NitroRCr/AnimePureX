@@ -308,7 +308,7 @@ class Illust:
         self.user = User(pixiv_id=info.user.id)
         self.type_id = info.id
         self.type_tags = self.get_translated_tags(info.tags)
-        self.origin_tags = [tag.name for tag in info.tags]
+        self.original_tags = [tag.name for tag in info.tags]
         self.image_urls = self.get_original_urls(info)
         self.image_exts = [url.split('.')[-1] for url in self.image_urls]
         self.type_likes = info.total_bookmarks
@@ -393,7 +393,7 @@ class Illust:
         self.type = APIType(info['type'])
         self.user = User(from_id=info['user'])
         self.type_id = info['type_id']
-        self.type_tags = info['type_tags'].split(' ')
+        self.type_tags = info['type_tags'].split(' ') if info['type_tags'] else []
         self.original_tags = json.loads(info['original_tags'])
         self.image_urls = json.loads(info['image_urls'])
         self.image_exts = json.loads(info['image_exts'])
@@ -401,8 +401,8 @@ class Illust:
         self.publish_time = info['publish_time']
         self.age_limit = AgeLimit(info['age_limit'])
         self.downloaded = info['downloaded']
-        self.passed_evals = info['passed_evals'].split(' ')
-        self.tested_evals = info['tested_evals'].split(' ')
+        self.passed_evals = info['passed_evals'].split(' ') if info['passed_evals'] else []
+        self.tested_evals = info['tested_evals'].split(' ') if info['tested_evals'] else []
 
     def write(self):
         es.index(Indexes.ILLUSTS.value, {
@@ -412,7 +412,7 @@ class Illust:
             'user': self.user.id,
             'type_id': self.type_id,
             'type_tags': ' '.join(self.type_tags),
-            'original_tags': json.dumps(self.origin_tags, ensure_ascii=False),
+            'original_tags': json.dumps(self.original_tags, ensure_ascii=False),
             'searched': ' '.join([self.title] + self.type_tags),
             'image_urls': json.dumps(self.image_urls, ensure_ascii=False),
             'image_exts': json.dumps(self.image_exts, ensure_ascii=False),
@@ -690,7 +690,8 @@ def evaluate_all():
         offset = 0
         illusts = []
         res = search_illusts(limit, offset, IllustSort.TIME, {
-            'not_tested_evals': [evaluator['name']]
+            'not_tested_evals': [evaluator['name']],
+            'downloaded': True
         })
         while len(res) != 0:
             illusts += res
