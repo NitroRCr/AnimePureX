@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 import os
 from elasticsearch import Elasticsearch
 import re
+import random
 import subprocess
 from evaluators import quality_v1
 
@@ -110,7 +111,7 @@ pixiv_acctoken = None
 aapi = AppPixivAPI()
 aapi.set_accept_language(CONFIG['pixiv_api']['accept_language'])
 
-api_tries = [0.1, 0.5, 1, 3, 10, None]
+api_tries = (0.3, 1, 5, 10, 20, 60, None)
 
 
 def get_id(type):
@@ -343,7 +344,7 @@ class Illust:
                 transtated.append(tag.name)
         return transtated
 
-    def download(self):
+    def download(self, retry=3):
         self.read()
         if self.downloaded:
             return
@@ -377,10 +378,19 @@ class Illust:
                 webp_out = os.path.join(ddir, fname % (i, quality, 'webp'))
                 jpg_out = os.path.join(ddir, fname % (i, quality, 'jpg'))
                 scale = "scale='min(iw, sqrt(%d/iw/ih)*iw)':-2" % pixel_num
-                subprocess.run(['ffmpeg', '-i', opath, '-codec', 'libwebp', '-q', str(webpq),
+                try:
+                    subprocess.run(['ffmpeg', '-i', opath, '-codec', 'libwebp', '-q', str(webpq),
                                 '-vf', scale, webp_out, '-loglevel', 'error', '-y'], check=True)
-                subprocess.run(['ffmpeg', '-i', opath, '-q', str(jpgq),
+                    subprocess.run(['ffmpeg', '-i', opath, '-q', str(jpgq),
                                 '-vf', scale, jpg_out, '-loglevel', 'error', '-y'], check=True)
+                except Exception as e:
+                    if retry > 0:
+                        print('failed in ffmpeg, retrying')
+                        self.download(retry - 1)
+                        return
+                    else:
+                        raise e
+
 
         self.read()
         self.downloaded = True
@@ -652,6 +662,7 @@ def pixiv_loop_ranking():
                     continue
                 illusts.append(Illust(pixiv_id=illust.id, pixiv_info=illust))
                 ids.append(illust.id)
+                time.sleep(random.uniform(0.1, 0.6))
             offset += 30
         if date_err:
             start_time -= loop_time
