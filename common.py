@@ -607,8 +607,26 @@ def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
             filter.append({'term': {'type': query['type']}})
         if 'age_limit' in query:
             filter.append({'term': {'age_limit': query['age_limit']}})
+        if 'user' in query:
+            filter.append({'term': {'user': query['user']}})
     hits = es.search(body, Indexes.ILLUSTS.value)['hits']['hits']
     return [Illust(from_id=hit['_id']) for hit in hits]
+
+def search_users(limit, offset=0, query=None):
+    body = {
+        'from': offset,
+        'size': limit,
+        '_source': []
+    }
+    if query:
+        should = []
+        body['query'] = {'bool': {'should': should}}
+        if 'text' in query:
+            should.append({'match': {'account': query['text']}})
+            should.append({'match': {'name': query['text']}})
+
+    hits = es.search(body, Indexes.USERS.value)['hits']['hits']
+    return [User(from_id=hit['_id']) for hit in hits]
 
 def pixiv_loop_ranking():
     rank = CONFIG['pixiv_api']['ranking']

@@ -2,6 +2,7 @@ from flask import Flask, request, abort
 from common import (
     Illust,
     search_illusts,
+    search_users,
     IllustSort,
     User,
     CONFIG,
@@ -23,10 +24,21 @@ def get_illusts():
     offset = search['offset'] if 'offset' in search else 0
     if 'downloaded' not in query:
         query['downloaded'] = True
-    if 'age_limit' not in query:
-        query['age_limit'] = AgeLimit.ALL_AGE.value
     illusts = search_illusts(limit, offset, sort, query)
     return json.dumps([i.json() for i in illusts], ensure_ascii=False)
+
+@app.route('/users')
+def get_users():
+    search = json.loads(request.args['search']) if 'search' in request.args else {}
+    limit = search['limit'] if 'limit' in search else 20
+    query = search['query'] if 'query' in search else {}
+    offset = search['offset'] if 'offset' in search else 0
+    if 'downloaded' not in query:
+        query['downloaded'] = True
+    if 'age_limit' not in query:
+        query['age_limit'] = AgeLimit.ALL_AGE.value
+    users = search_users(limit, offset, query)
+    return json.dumps([i.json() for i in users], ensure_ascii=False)
 
 @app.route('/illusts/<int:id>')
 def get_illust(id):
