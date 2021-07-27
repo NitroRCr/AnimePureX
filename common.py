@@ -362,6 +362,8 @@ class Illust:
             ext = self.image_exts[i]
             oname = fname % (i, 'original', ext)
             opath = os.path.join(ddir, oname)
+            if os.path.exists(opath):
+                os.remove(opath)
             if self.type == APIType.PIXIV:
                 for j in api_tries:
                     try:
