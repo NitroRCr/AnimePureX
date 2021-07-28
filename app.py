@@ -40,7 +40,7 @@ def get_users():
     users = search_users(limit, offset, query)
     return json.dumps([i.json() for i in users], ensure_ascii=False)
 
-@app.route('/illusts/<int:id>')
+@app.route('/illusts/<id>')
 def get_illust(id):
     try:
         illust = Illust(id)
@@ -48,7 +48,7 @@ def get_illust(id):
         abort(404)
     return json.dumps(illust.json(), ensure_ascii=False)
 
-@app.route('/users/<int:id>')
+@app.route('/users/<id>')
 def get_user(id):
     try:
         user = User(id)
