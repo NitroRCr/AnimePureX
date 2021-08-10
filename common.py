@@ -149,6 +149,7 @@ es = Elasticsearch(CONFIG['elasticsearch']['hosts'],
 if not es.indices.exists(Indexes.ILLUSTS.value):
     res = es.indices.create(Indexes.ILLUSTS.value, body={
         'mappings': {
+            "dynamic": "strict",
             'properties': {
                 'title': {
                     'type': 'text',
@@ -218,6 +219,7 @@ if not es.indices.exists(Indexes.ILLUSTS.value):
 if not es.indices.exists(Indexes.USERS.value):
     res = es.indices.create(Indexes.USERS.value, body={
         'mappings': {
+            "dynamic": "strict",
             'properties': {
                 'name': {
                     'type': 'text',
@@ -254,6 +256,7 @@ if not es.indices.exists(Indexes.USERS.value):
 if not es.indices.exists(Indexes.XUSERS.value):
     res = es.indices.create(Indexes.XUSERS.value, body={
         'mappings': {
+            "dynamic": "strict",
             'properties': {
                 'name': {
                     'type': 'text',
@@ -618,7 +621,7 @@ class Xuser:
                 ]}},
                 'size': 1,
                 '_source': []
-            }, Indexes.ILLUSTS.value)['hits']['hits']
+            }, Indexes.XUSERS.value)['hits']['hits']
             if hits:
                 self.id = hits[0]['_id']
                 self.read()
@@ -644,7 +647,7 @@ class Xuser:
         self.following = json.loads(info['following'])
 
     def write(self):
-        es.index(Indexes.USERS.value, {
+        es.index(Indexes.XUSERS.value, {
             'name': self.name,
             'password': self.password,
             'salt': self.salt,

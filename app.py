@@ -85,9 +85,10 @@ def get_xuser(name):
             abort(401)
         return json.dumps(xuser.json(), ensure_ascii=False)
     else:
+        data = request.form
         try:
             xuser = Xuser(name=name)
-        except:
+        except ValueError:
             xuser = Xuser(info={
                 'name': name,
                 'password': data['password'],
@@ -99,7 +100,7 @@ def get_xuser(name):
 
 @app.route('/token', methods=['POST'])
 def token():
-    data = request.json
+    data = request.form
     try:
         xuser = Xuser(name=data['name'])
     except ValueError:
