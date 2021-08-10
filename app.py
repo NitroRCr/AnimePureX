@@ -94,6 +94,7 @@ def get_xuser(name):
                 'password': data['password'],
                 'salt': data['salt']
             })
+            time.sleep(.5)
             return {'success': True}
         abort(409)
 

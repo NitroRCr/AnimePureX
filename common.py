@@ -280,7 +280,7 @@ if not es.indices.exists(Indexes.XUSERS.value):
             }
         },
         'settings': {
-            'refresh_interval': '60s'
+            'refresh_interval': '0.5s'
         }
     })
 
