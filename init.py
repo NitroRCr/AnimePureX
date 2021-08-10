@@ -1,5 +1,7 @@
 import os
 import json
+from random import choice
+from string import ascii_letters, digits
 
 CONF_TEMPLATES = {
     'config.json': {
@@ -24,7 +26,8 @@ CONF_TEMPLATES = {
         },
         "flask": {
             "host": "127.0.0.1",
-            "port": 5005
+            "port": 5005,
+            "token_key": ''.join([choice(ascii_letters + digits) for i in range(8)])
         },
         "download_threads": 4,
         "image_scale": {

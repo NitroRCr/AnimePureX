@@ -51,11 +51,13 @@ class Fnames(Enum):
 class Keys(Enum):
     ILLUST_ID = 'illust_id'
     USER_ID = 'user_id'
+    XUSER_ID = 'xuser_id'
 
 
 class Indexes(Enum):
     ILLUSTS = 'purex_illusts_v0.2'
     USERS = 'purex_users_v0.2'
+    XUSERS = 'purex_xuser_v0.2'
 
 
 class JsonDict:
@@ -101,6 +103,7 @@ class ConfigError(Exception):
         super().__init__(message, status)
         self.message = message
         self.status = status
+
 
 
 history = JsonDict('data/history.json')
@@ -245,6 +248,36 @@ if not es.indices.exists(Indexes.USERS.value):
         },
         'settings': {
             'refresh_interval': '3s'
+        }
+    })
+
+if not es.indices.exists(Indexes.XUSERS.value):
+    res = es.indices.create(Indexes.XUSERS.value, body={
+        'mappings': {
+            'properties': {
+                'name': {
+                    'type': 'text',
+                },
+                'password': {
+                    'type': 'text',
+                    'index': False
+                },
+                'salt': {
+                    'type': 'text',
+                    'index': False
+                },
+                'favorited': {
+                    'type': 'text',
+                    'index': False
+                },
+                'following': {
+                    'type': 'text',
+                    'index': False
+                }
+            }
+        },
+        'settings': {
+            'refresh_interval': '60s'
         }
     })
 
@@ -571,6 +604,99 @@ class User:
         }
 
 
+class Xuser:
+    def __init__(self, from_id=None, name=None, info=None):
+        if from_id is not None:
+            self.id = from_id
+            self.read()
+        elif name is not None:
+            hits = es.search({
+                'query': {'bool': {'filter': [
+                    {'term': {
+                        'name': name
+                    }}
+                ]}},
+                'size': 1,
+                '_source': []
+            }, Indexes.ILLUSTS.value)['hits']['hits']
+            if hits:
+                self.id = hits[0]['_id']
+                self.read()
+            else:
+                raise ValueError('user not found')
+        elif info is not None:
+            self.id = get_id(Keys.XUSER_ID.value)
+            self.name = info['name']
+            self.password = info['password']
+            self.salt = info['salt']
+            self.favorited = []
+            self.following = []
+            self.write()
+        else:
+            raise Exception()
+
+    def read(self):
+        info = es.get(Indexes.XUSERS.value, self.id)['_source']
+        self.name = info['name']
+        self.password = info['password']
+        self.salt = info['salt']
+        self.favorited = json.loads(info['favorited'])
+        self.following = json.loads(info['following'])
+
+    def write(self):
+        es.index(Indexes.USERS.value, {
+            'name': self.name,
+            'password': self.password,
+            'salt': self.salt,
+            'favorited': json.dumps(self.favorited),
+            'following': json.dumps(self.following)
+        }, id=self.id)
+
+    def brief(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'salt': self.salt
+        }
+
+    def json(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'salt': self.salt,
+            'favorited': [Illust(from_id=id) for id in self.favorited],
+            'following': [User(from_id=id) for id in self.following]
+        }
+    
+
+
+def get_es_query(query):
+    must = []
+    filter = []
+    must_not = []
+    es_query = {'bool': {'must': must, 'filter': filter, 'must_not': must_not}}
+    if 'text' in query:
+        must.append({'match': {'searched': query['text']}})
+    if 'tags' in query:
+        for tag in query['tags']:
+            filter.append({'term': {'type_tags': tag}})
+    if 'passed_evals' in query:
+        for evaluator in query['passed_evals']:
+            filter.append({'term': {'passed_evals': evaluator}})
+    if 'not_tested_evals' in query:
+        for evaluator in query['not_tested_evals']:
+            must_not.append({'term': {'tested_evals': evaluator}})
+    if 'downloaded' in query:
+        filter.append({'term': {'downloaded': query['downloaded']}})
+    if 'type' in query:
+        filter.append({'term': {'type': query['type']}})
+    if 'age_limit' in query:
+        filter.append({'term': {'age_limit': query['age_limit']}})
+    if 'user' in query:
+        filter.append({'term': {'user': query['user']}})
+    return es_query
+
+
 def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
     body = {
         'from': offset,
@@ -588,31 +714,25 @@ def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
     elif sort == IllustSort.TIME:
         body['sort'] = {"publish_time": {"order": "desc"}}
     if query:
-        must = []
-        filter = []
-        must_not = []
-        body['query'] = {'bool': {'must': must, 'filter': filter, 'must_not': must_not}}
-        if 'text' in query:
-            must.append({'match': {'searched': query['text']}})
-        if 'tags' in query:
-            for tag in query['tags']:
-                filter.append({'term': {'type_tags': tag}})
-        if 'passed_evals' in query:
-            for evaluator in query['passed_evals']:
-                filter.append({'term': {'passed_evals': evaluator}})
-        if 'not_tested_evals' in query:
-            for evaluator in query['not_tested_evals']:
-                must_not.append({'term': {'tested_evals': evaluator}})
-        if 'downloaded' in query:
-            filter.append({'term': {'downloaded': query['downloaded']}})
-        if 'type' in query:
-            filter.append({'term': {'type': query['type']}})
-        if 'age_limit' in query:
-            filter.append({'term': {'age_limit': query['age_limit']}})
-        if 'user' in query:
-            filter.append({'term': {'user': query['user']}})
+        body['query'] = get_es_query(query)
     hits = es.search(body, Indexes.ILLUSTS.value)['hits']['hits']
     return [Illust(from_id=hit['_id']) for hit in hits]
+
+def scroll_illusts(query, size=5000):
+    res = es.search({
+        'query': get_es_query(query),
+        'size': size,
+        '_source': []
+    }, Indexes.ILLUSTS.value, scroll='1m')
+    hits = res['hits']
+    illusts = [Illust(from_id=hit['_id']) for hit in hits['hits']]
+    while res['_scroll_id'] and hits['hits']:
+        res = es.scroll({'scroll': '1m', 'scroll_id': res['_scroll_id']})
+        hits = res['hits']
+        for hit in hits['hits']:
+            illusts.append(Illust(from_id=hit['_id']))
+    return illusts
+
 
 def search_users(limit, offset=0, query=None):
     body = {
@@ -718,19 +838,10 @@ def evaluate_all():
         if not evaluator['enable']:
             continue
         evaluator['load']()
-        offset = 0
-        illusts = []
-        res = search_illusts(limit, offset, IllustSort.TIME, {
+        illusts = scroll_illusts({
             'not_tested_evals': [evaluator['name']],
             'downloaded': True
         })
-        while len(res) != 0:
-            illusts += res
-            offset += len(res)
-            res = search_illusts(limit, offset, IllustSort.TIME, {
-                'not_tested_evals': [evaluator['name']],
-                'downloaded': True
-            })
         offset = 0
         num = len(illusts)
         while offset < num:
