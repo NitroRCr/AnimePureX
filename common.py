@@ -280,7 +280,7 @@ if not es.indices.exists(Indexes.XUSERS.value):
             }
         },
         'settings': {
-            'refresh_interval': '0.5s'
+            'refresh_interval': '1s'
         }
     })
 
@@ -632,7 +632,11 @@ class Xuser:
             self.name = info['name']
             self.password = info['password']
             self.salt = info['salt']
-            self.favorited = []
+            self.favorited = [{
+                'name': '默认',
+                'default': True,
+                'ids': []
+            }]
             self.following = []
             self.write()
         else:

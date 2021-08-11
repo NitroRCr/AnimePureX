@@ -19,9 +19,12 @@ app = Flask(__name__, static_url_path='')
 
 @app.route('/illusts', methods=['GET'])
 def get_illusts():
-    search = json.loads(request.args['search']) if 'search' in request.args else {
-        'sort': IllustSort.RANDOM.value
-    }
+    try:
+        search = json.loads(request.args['search']) if 'search' in request.args else {
+            'sort': IllustSort.RANDOM.value
+        }
+    except json.JSONDecodeError:
+        abort(400)
     limit = search['limit'] if 'limit' in search else 20
     sort = IllustSort(
         search['sort']) if 'sort' in search else IllustSort.DEFAULT
@@ -29,14 +32,20 @@ def get_illusts():
     offset = search['offset'] if 'offset' in search else 0
     if 'downloaded' not in query:
         query['downloaded'] = True
-    illusts = search_illusts(limit, offset, sort, query)
+    if 'ids' in search:
+        illusts = [Illust(from_id=id) for id in search['ids']]
+    else:
+        illusts = search_illusts(limit, offset, sort, query)
     return json.dumps([i.json() for i in illusts], ensure_ascii=False)
 
 
 @app.route('/users', methods=['GET'])
 def get_users():
-    search = json.loads(request.args['search']
+    try:
+        search = json.loads(request.args['search']
                         ) if 'search' in request.args else {}
+    except json.JSONDecodeError:
+        abort(400)
     limit = search['limit'] if 'limit' in search else 20
     query = search['query'] if 'query' in search else {}
     offset = search['offset'] if 'offset' in search else 0
@@ -44,7 +53,10 @@ def get_users():
         query['downloaded'] = True
     if 'age_limit' not in query:
         query['age_limit'] = AgeLimit.ALL_AGE.value
-    users = search_users(limit, offset, query)
+    if 'ids' in search:
+        users = [User(from_id=id) for id in search['ids']]
+    else:
+        users = search_users(limit, offset, query)
     return json.dumps([i.json() for i in users], ensure_ascii=False)
 
 
@@ -94,9 +106,25 @@ def get_xuser(name):
                 'password': data['password'],
                 'salt': data['salt']
             })
-            time.sleep(.5)
+            time.sleep(1)
             return {'success': True}
-        abort(409)
+        if 'token' not in data or cert_token(data['token']) != name:
+            abort(403)
+        if 'password' in data:
+            xuser['password'] = data['password']
+        if 'favorited' in data:
+            try:
+                xuser['favorited'] = json.loads(data['favorited'])
+            except json.JSONDecodeError:
+                abort(400)
+        if 'following' in data:
+            try:
+                xuser['following'] = json.loads(data['following'])
+            except json.JSONDecodeError:
+                abort(400)
+        xuser.write()
+        return {'success': True}
+
 
 
 @app.route('/token', methods=['POST'])
