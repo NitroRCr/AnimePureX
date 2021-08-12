@@ -671,8 +671,8 @@ class Xuser:
             'id': self.id,
             'name': self.name,
             'salt': self.salt,
-            'favorited': [Illust(from_id=id) for id in self.favorited],
-            'following': [User(from_id=id) for id in self.following]
+            'favorited': self.favorited,
+            'following': self.following
         }
     
 
