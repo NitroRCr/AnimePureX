@@ -93,9 +93,9 @@ def get_xuser(name):
             xuser = Xuser(name=name)
         except ValueError:
             abort(404)
-        if 'token' not in headers:
+        if 'Authorization' not in headers:
             return json.dumps(xuser.brief(), ensure_ascii=False)
-        cert = cert_token(headers['token'])
+        cert = cert_token(headers['Authorization'])
         if not cert or cert != xuser.name:
             abort(401)
         return json.dumps(xuser.json(), ensure_ascii=False)
@@ -111,7 +111,7 @@ def get_xuser(name):
             })
             time.sleep(1)
             return {'success': True}
-        if 'token' not in headers or cert_token(headers['token']) != name:
+        if 'Authorization' not in headers or cert_token(headers['Authorization']) != name:
             abort(403)
         if 'password' in data:
             xuser.password = data['password']
