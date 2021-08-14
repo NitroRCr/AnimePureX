@@ -111,8 +111,10 @@ def get_xuser(name):
             })
             time.sleep(1)
             return {'success': True}
-        if 'Authorization' not in headers or cert_token(headers['Authorization']) != name:
-            abort(403)
+        if 'Authorization' not in headers:
+            abort(409)
+        if cert_token(headers['Authorization']) != name:
+            abort(401)
         if 'password' in data:
             xuser.password = data['password']
         if 'favorited' in data:

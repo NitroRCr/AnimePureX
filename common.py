@@ -57,7 +57,7 @@ class Keys(Enum):
 class Indexes(Enum):
     ILLUSTS = 'purex_illusts_v0.2'
     USERS = 'purex_users_v0.2'
-    XUSERS = 'purex_xuser_v0.2'
+    XUSERS = 'purex_xusers_v0.3'
 
 
 class JsonDict:
@@ -260,6 +260,12 @@ if not es.indices.exists(Indexes.XUSERS.value):
             'properties': {
                 'name': {
                     'type': 'text',
+                    'fields': {
+                        'keyword': {
+                            'type': 'keyword',
+                            'ignore_above': 256
+                        }
+                    }
                 },
                 'password': {
                     'type': 'text',
@@ -616,7 +622,7 @@ class Xuser:
             hits = es.search({
                 'query': {'bool': {'filter': [
                     {'term': {
-                        'name': name
+                        'name.keyword': name
                     }}
                 ]}},
                 'size': 1,
