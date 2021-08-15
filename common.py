@@ -168,6 +168,9 @@ if not es.indices.exists(Indexes.ILLUSTS.value):
                 'type_id': {
                     'type': 'integer'
                 },
+                'type_type': {
+                    'type': 'keyword'
+                },
                 'type_tags': {
                     'type': 'text',
                     'analyzer': 'whitespace'
@@ -306,6 +309,8 @@ class Illust:
         if from_id is not None:
             self.id = from_id
             self.read()
+            if pixiv_info:
+                self.update_from_pixiv(pixiv_info)
         elif pixiv_id is not None:
             hits = es.search({
                 'query': {'bool': {'filter': [
@@ -322,6 +327,8 @@ class Illust:
             if hits:
                 self.id = hits[0]['_id']
                 self.read()
+                if pixiv_info:
+                    self.update_from_pixiv(pixiv_info)
             else:
                 if pixiv_info:
                     self.load_from_pixiv(pixiv_info)
@@ -351,6 +358,7 @@ class Illust:
         self.user = User(pixiv_id=info.user.id)
         self.type_id = info.id
         self.type_tags = self.get_translated_tags(info.tags)
+        self.type_type = info.type
         self.original_tags = [tag.name for tag in info.tags]
         self.image_urls = self.get_original_urls(info)
         self.image_exts = [url.split('.')[-1] for url in self.image_urls]
@@ -369,6 +377,13 @@ class Illust:
         self.tested_evals = []
         self.write()
 
+    def update_from_pixiv(self, info):
+        self.title = info.title
+        self.type_tags = self.get_translated_tags(info.tags)
+        self.original_tags = [tag.name for tag in info.tags]
+        self.type_likes = info.total_bookmarks
+        self.write()
+
     def get_original_urls(self, info):
         if info.page_count == 1:
             return [info.meta_single_page.original_image_url]
@@ -384,6 +399,8 @@ class Illust:
                 transtated.append(tag.translated_name)
             elif cn.search(tag.name) and (not jap.search(tag.name)):
                 transtated.append(tag.name)
+            elif tag.translated_name and (not jap.search(tag.translated_name)):
+                transtated.append(tag.translated_name)
         return transtated
 
     def download(self, retry=3):
@@ -448,6 +465,7 @@ class Illust:
         self.user = User(from_id=info['user'])
         self.type_id = info['type_id']
         self.type_tags = info['type_tags'].split(' ') if info['type_tags'] else []
+        self.type_type = info['type_type']
         self.original_tags = json.loads(info['original_tags'])
         self.image_urls = json.loads(info['image_urls'])
         self.image_exts = json.loads(info['image_exts'])
@@ -466,6 +484,7 @@ class Illust:
             'user': self.user.id,
             'type_id': self.type_id,
             'type_tags': ' '.join(self.type_tags),
+            'type_type': self.type_type,
             'original_tags': json.dumps(self.original_tags, ensure_ascii=False),
             'searched': ' '.join([self.title] + self.type_tags),
             'image_urls': json.dumps(self.image_urls, ensure_ascii=False),
@@ -486,6 +505,7 @@ class Illust:
             'caption': self.caption,
             'type': self.type.value,
             'type_id': self.type_id,
+            'type_type': self.type_type,
             'tags': self.type_tags,
             'likes': self.type_likes,
             'publish_time': self.publish_time,
@@ -702,7 +722,7 @@ def get_es_query(query):
     if 'downloaded' in query:
         filter.append({'term': {'downloaded': query['downloaded']}})
     if 'type' in query:
-        filter.append({'term': {'type': query['type']}})
+        filter.append({'term': {'type_type': query['type']}})
     if 'age_limit' in query:
         filter.append({'term': {'age_limit': query['age_limit']}})
     if 'user' in query:
@@ -731,7 +751,7 @@ def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
     hits = es.search(body, Indexes.ILLUSTS.value)['hits']['hits']
     return [Illust(from_id=hit['_id']) for hit in hits]
 
-def scroll_illusts(query, size=5000):
+def scroll_illusts(query={}, size=5000):
     res = es.search({
         'query': get_es_query(query),
         'size': size,
