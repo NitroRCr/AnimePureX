@@ -393,15 +393,15 @@ class Illust:
     def get_translated_tags(self, tags):
         cn = re.compile(r'[\u4e00-\u9fff]')
         jap = re.compile(r'[\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7A3]')
-        transtated = []
+        transtated = set()
         for tag in tags:
             if tag.translated_name and cn.search(tag.translated_name):
-                transtated.append(tag.translated_name)
+                transtated.add(tag.translated_name)
             elif cn.search(tag.name) and (not jap.search(tag.name)):
-                transtated.append(tag.name)
+                transtated.add(tag.name)
             elif tag.translated_name and (not jap.search(tag.translated_name)):
-                transtated.append(tag.translated_name)
-        return transtated
+                transtated.add(tag.translated_name)
+        return list(transtated)
 
     def download(self, retry=3):
         self.read()
