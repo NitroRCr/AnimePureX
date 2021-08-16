@@ -727,6 +727,9 @@ def get_es_query(query):
         filter.append({'term': {'age_limit': query['age_limit']}})
     if 'user' in query:
         filter.append({'term': {'user': query['user']}})
+    if 'pixiv_id' in query:
+        filter.append({'term': {'type': APIType.PIXIV.value}})
+        filter.append({'term': {'type_id': query['pixiv_id']}})
     return es_query
 
 
