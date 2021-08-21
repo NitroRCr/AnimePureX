@@ -3,7 +3,7 @@ from keras.preprocessing import image
 import numpy as np
 
 model = None
-target_size = (150, 150)
+target_size = (224, 224)
 
 def _rescale(x):
     return x/255
@@ -12,7 +12,7 @@ def load():
     global model
     if model:
         return
-    model = models.load_model('saved_models/quality_model.h5')
+    model = models.load_model('saved_models/cute_model.h5')
 
 
 def eval(img_path):

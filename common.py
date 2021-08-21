@@ -14,6 +14,7 @@ import re
 import random
 import subprocess
 from evaluators import quality_v1
+from evaluators import cute_v1
 
 
 class AgeLimit(IntEnum):
@@ -301,6 +302,14 @@ evaluators = [
         'eval': quality_v1.eval,
         'eval_batch': quality_v1.eval_batch,
         'show_name': '高质量v1'
+    },
+    {
+        'name': 'cute_v1',
+        'enable': False,
+        'load': cute_v1.load,
+        'eval': cute_v1.eval,
+        'eval_batch': cute_v1.eval_batch,
+        'show_name': '可爱v1'
     }
 ]
 
