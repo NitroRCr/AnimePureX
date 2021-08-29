@@ -7,9 +7,9 @@ from common import (
     User,
     Xuser,
     CONFIG,
-    AgeLimit,
-    IdNotFoundError
+    AgeLimit
 )
+from elasticsearch import NotFoundError
 import json
 import jwt
 import time
@@ -66,7 +66,7 @@ def get_users():
 def get_illust(id):
     try:
         illust = Illust(id)
-    except IdNotFoundError:
+    except NotFoundError:
         abort(404)
     return json.dumps(illust.json(), ensure_ascii=False)
 
@@ -75,13 +75,9 @@ def get_illust(id):
 def get_user(id):
     try:
         user = User(id)
-    except IdNotFoundError:
+    except NotFoundError:
         abort(404)
     return json.dumps(user.json(), ensure_ascii=False)
-
-
-if __name__ == '__main__':
-    app.run(host=CONFIG['flask']['host'], port=CONFIG['flask']['port'])
 
 
 @app.route('/xusers/<name>', methods=['GET', 'PUT'])
@@ -163,3 +159,6 @@ def cert_token(token):
     if info['exp'] < time.time():
         return False
     return info['name']
+
+if __name__ == '__main__':
+    app.run(host=CONFIG['flask']['host'], port=CONFIG['flask']['port'])

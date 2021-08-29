@@ -3,7 +3,7 @@ from pixiv_auth import refresh
 import sqlite3
 from enum import IntEnum, Enum
 import json
-from threading import Thread
+from threading import Thread, Lock
 import init
 import time
 from urllib.parse import urljoin
@@ -90,21 +90,12 @@ class APIError(Exception):
         self.status = status
 
 
-class IdNotFoundError(ValueError):
-    def __init__(self, message):
-        status = 102
-        super().__init__(message, status)
-        self.message = message
-        self.status = status
-
-
 class ConfigError(Exception):
     def __init__(self, message):
         status = 103
         super().__init__(message, status)
         self.message = message
         self.status = status
-
 
 
 history = JsonDict('data/history.json')
@@ -313,6 +304,7 @@ evaluators = [
     }
 ]
 
+
 class Illust:
     def __init__(self, from_id=None, pixiv_info=None, pixiv_id=None):
         if from_id is not None:
@@ -450,9 +442,9 @@ class Illust:
                 scale = "scale='min(iw, sqrt(%d/iw/ih)*iw)':-2" % pixel_num
                 try:
                     subprocess.run(['ffmpeg', '-i', opath, '-codec', 'libwebp', '-q', str(webpq),
-                                '-vf', scale, webp_out, '-loglevel', 'error', '-y'], check=True)
+                                    '-vf', scale, webp_out, '-loglevel', 'error', '-y'], check=True)
                     subprocess.run(['ffmpeg', '-i', opath, '-q', str(jpgq),
-                                '-vf', scale, jpg_out, '-loglevel', 'error', '-y'], check=True)
+                                    '-vf', scale, jpg_out, '-loglevel', 'error', '-y'], check=True)
                 except Exception as e:
                     if retry > 0:
                         print('failed in ffmpeg, retrying')
@@ -460,7 +452,6 @@ class Illust:
                         return
                     else:
                         raise e
-
 
         self.read()
         self.downloaded = True
@@ -473,7 +464,8 @@ class Illust:
         self.type = APIType(info['type'])
         self.user = User(from_id=info['user'])
         self.type_id = info['type_id']
-        self.type_tags = info['type_tags'].split(' ') if info['type_tags'] else []
+        self.type_tags = info['type_tags'].split(
+            ' ') if info['type_tags'] else []
         self.type_type = info['type_type']
         self.original_tags = json.loads(info['original_tags'])
         self.image_urls = json.loads(info['image_urls'])
@@ -482,8 +474,10 @@ class Illust:
         self.publish_time = info['publish_time']
         self.age_limit = AgeLimit(info['age_limit'])
         self.downloaded = info['downloaded']
-        self.passed_evals = info['passed_evals'].split(' ') if info['passed_evals'] else []
-        self.tested_evals = info['tested_evals'].split(' ') if info['tested_evals'] else []
+        self.passed_evals = info['passed_evals'].split(
+            ' ') if info['passed_evals'] else []
+        self.tested_evals = info['tested_evals'].split(
+            ' ') if info['tested_evals'] else []
 
     def write(self):
         es.index(Indexes.ILLUSTS.value, {
@@ -709,7 +703,6 @@ class Xuser:
             'favorited': self.favorited,
             'following': self.following
         }
-    
 
 
 def get_es_query(query):
@@ -746,7 +739,7 @@ def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
     body = {
         'from': offset,
         'size': limit,
-        '_source': []
+        '_source': ['title']
     }
     if sort == IllustSort.RANDOM:
         body['sort'] = {"_script": {
@@ -763,11 +756,12 @@ def search_illusts(limit, offset=0, sort=IllustSort.DEFAULT, query=None):
     hits = es.search(body, Indexes.ILLUSTS.value)['hits']['hits']
     return [Illust(from_id=hit['_id']) for hit in hits]
 
+
 def scroll_illusts(query={}, size=5000):
     res = es.search({
         'query': get_es_query(query),
         'size': size,
-        '_source': []
+        '_source': ['title']
     }, Indexes.ILLUSTS.value, scroll='1m')
     hits = res['hits']
     illusts = [Illust(from_id=hit['_id']) for hit in hits['hits']]
@@ -794,6 +788,7 @@ def search_users(limit, offset=0, query=None):
 
     hits = es.search(body, Indexes.USERS.value)['hits']['hits']
     return [User(from_id=hit['_id']) for hit in hits]
+
 
 def pixiv_loop_ranking():
     rank = CONFIG['pixiv_api']['ranking']
@@ -871,9 +866,28 @@ def pixiv_loop_ranking():
     history.write()
 
 
+lock = Lock()
+
+
 def download_batch(illusts):
-    for i in illusts:
+    threads = []
+    for i in range(CONFIG['download_threads']):
+        threads.append(Thread(target=download_thread,
+                              args=(illusts,), daemon=True))
+    for t in threads:
+        t.start()
+    
+    for t in threads:
+        t.join()
+
+def download_thread(illusts):
+    lock.acquire()
+    while illusts:
+        i = illusts.pop()
+        lock.release()
         i.download()
+        lock.acquire()
+    lock.release()
 
 
 def evaluate_all():
@@ -893,7 +907,8 @@ def evaluate_all():
             batch_illusts = illusts[offset:min(offset+batch_size, num)]
             size = len(batch_illusts)
             iids = [i.id for i in batch_illusts]
-            img_paths = [os.path.join(Paths.IMG_DIR.value % iid, 'p0_large.jpg') for iid in iids]
+            img_paths = [os.path.join(
+                Paths.IMG_DIR.value % iid, 'p0_large.jpg') for iid in iids]
             results = evaluator['eval_batch'](img_paths)
             for i in range(size):
                 illust = batch_illusts[i]
