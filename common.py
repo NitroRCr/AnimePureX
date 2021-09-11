@@ -110,7 +110,6 @@ api_tries = (0.3, 1, 5, 10, 20, 60, None)
 
 
 def get_id(type):
-    history.read()
     ids = history.value['ids']
     if type in ids:
         ids[type] += 1
