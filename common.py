@@ -732,6 +732,8 @@ def get_es_query(query):
     if 'pixiv_id' in query:
         filter.append({'term': {'type': APIType.PIXIV.value}})
         filter.append({'term': {'type_id': query['pixiv_id']}})
+    if 'min_likes' in query:
+        filter.append({'term': {'likes': { "gte": query['likes'] }}})
     return es_query
 
 
@@ -876,9 +878,10 @@ def download_batch(illusts):
                               args=(illusts,), daemon=True))
     for t in threads:
         t.start()
-    
+
     for t in threads:
         t.join()
+
 
 def download_thread(illusts):
     lock.acquire()
