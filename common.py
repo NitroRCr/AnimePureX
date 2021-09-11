@@ -732,7 +732,7 @@ def get_es_query(query):
         filter.append({'term': {'type': APIType.PIXIV.value}})
         filter.append({'term': {'type_id': query['pixiv_id']}})
     if 'min_likes' in query:
-        filter.append({'term': {'likes': { "gte": query['likes'] }}})
+        filter.append({'range': {'type_likes': { "gte": query['min_likes'] }}})
     return es_query
 
 
