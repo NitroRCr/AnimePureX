@@ -46,7 +46,7 @@ python init.py
   - `webp_q`: webp格式图片压缩质量，取值0~100，越大质量越高
   - `jpg_q`: jpg格式图片压缩质量，取值1~31，越小质量越高
 
-配置评估模型，可以参考`evaluators`目录的内容
+配置评估模型，可以参考`evaluators`目录的内容。需在`common.py`中填写`evaluators`的信息
 
 下载、评估图片
 
