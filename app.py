@@ -1,4 +1,4 @@
-from flask import Flask, request, abort
+from flask import Flask, request, abort, send_from_directory
 from common import (
     Illust,
     search_illusts,
@@ -137,6 +137,14 @@ def token():
     if data['password'] != xuser.password:
         abort(403)
     return gen_token(xuser.name)
+
+
+@app.route('/download/<path:fname>')
+def download_file(fname):
+    kwargs = {'as_attachment': True}
+    if 'filename' in request.args:
+        kwargs['attachment_filename'] = request.args['filename']
+    return send_from_directory('static', fname, **kwargs)
 
 
 def gen_token(name):
